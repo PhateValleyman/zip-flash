@@ -1,5 +1,9 @@
 # ZIP Flash (fork of Magic Flash)
 
+Version: 1.6
+
+
+
 Flash recovery ZIP packages without a custom recovery (TWRP/OrangeFox) using an isolated chroot environment.
 
 ## Features
