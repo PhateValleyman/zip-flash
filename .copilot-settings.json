@@ -1,0 +1,9 @@
+{
+  "auto_bump": true,
+  "auto_commit": true,
+  "auto_push": true,
+  "auto_release_for_magisk": true,
+  "scope": "repository",
+  "created_at": "2026-08-17T21:47:00Z",
+  "note": "Repository-level settings created by Copilot CLI for this system/session"
+}
