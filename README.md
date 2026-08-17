@@ -1,6 +1,6 @@
 # ZIP Flash (fork of Magic Flash)
 
-Version: 1.6
+Version: 1.7
 
 
 
