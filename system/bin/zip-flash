@@ -1,0 +1,199 @@
+#!/bin/sh
+# ZIP Flash - Flash recovery ZIPs without recovery
+# Author: PhateValleyman (Refactored & Optimized)
+
+set -uo pipefail
+
+MODID="zip-flash"
+MODDIR="/data/adb/modules/$MODID"
+DATA="/data/adb/$MODID"
+LOGDIR="$DATA/logs"
+
+# Busybox resolution
+BUSYBOX=""
+for bb in "/data/adb/magisk/busybox" "$(which busybox 2>/dev/null)"; do
+    if [ -x "$bb" ]; then
+        BUSYBOX="$bb"
+        break
+    fi
+done
+
+[ -z "$BUSYBOX" ] && { echo "! Busybox not found!"; exit 1; }
+
+export PATH="/sbin:/system/bin:/system/xbin:$MODDIR"
+export TMPDIR=/tmp
+
+NOSYSTEM="${NOSYSTEM:-0}"
+SYSTEM_MODE="${SYSTEM_MODE:-}"
+DEBUG="${DEBUG:-0}"
+
+mkdir -p "$LOGDIR" "$DATA"
+LOGFILE="$LOGDIR/$(date +%Y-%m-%d_%H-%M-%S).log"
+
+log() {
+    echo "$@" | tee -a "$LOGFILE"
+}
+
+abort() {
+    log "! ERROR: $1"
+    cleanup
+    exit 1
+}
+
+save_success() {
+    echo "$1" > "$DATA/last-success"
+    date >> "$DATA/last-success"
+}
+
+cleanup() {
+    [ -z "${NEWROOT:-}" ] && return
+    log "Cleaning up environment..."
+    
+    for mnt in proc sys/fs/selinux sys dev data sdcard sideload apex tmp; do
+        $BUSYBOX umount -l "$NEWROOT/$mnt" 2>/dev/null || true
+    done
+    
+    if [ "$SYSTEM_MODE" = "rw" ]; then
+        for part in /system /vendor /product /system_ext; do
+            mount -o ro,remount "$part" 2>/dev/null || true
+        done
+    fi
+
+    $BUSYBOX umount -l "$NEWROOT" 2>/dev/null || true
+    rm -rf "$NEWROOT" 
+
+    rm -rf /data/adb/sideload
+}
+
+make_chroot() {
+    log "Preparing chroot environment..."
+    
+    NEWROOT="/dev/zipflash_$$"
+    rm -rf "$NEWROOT"
+    mkdir -p "$NEWROOT"
+    
+    rm -rf /data/adb/sideload
+    mkdir -p /data/adb/sideload
+    chmod 777 /data/adb/sideload
+    chcon u:object_r:system_file:s0 /data/adb/sideload 2>/dev/null || true
+
+    mount -t tmpfs tmpfs "$NEWROOT" || abort "Failed to mount tmpfs for chroot"
+
+    for dir in apex cache data sbin sys proc dev sideload sdcard etc mnt tmp system; do
+        mkdir -p "$NEWROOT/$dir"
+    done
+    
+    mount -t tmpfs tmpfs "$NEWROOT/tmp"
+
+    prepare_partition() {
+        local path="$1"
+        if mountpoint -q "$path"; then
+            mkdir -p "$NEWROOT$path"
+            if [ "$NOSYSTEM" != "1" ]; then
+                mount --bind "$path" "$NEWROOT$path"
+                [ "$SYSTEM_MODE" = "rw" ] && mount -o rw,remount "$NEWROOT$path"
+                [ "$SYSTEM_MODE" = "ro" ] && mount -o ro,remount "$NEWROOT$path"
+            fi
+        elif [ -L "$path" ]; then
+            ln -s "/system$path" "$NEWROOT$path"
+        fi
+    }
+
+    prepare_partition "/system"
+    prepare_partition "/vendor"
+    prepare_partition "/product"
+    prepare_partition "/system_ext"
+
+    # Core bind mounts
+    mount --bind /dev "$NEWROOT/dev"
+    mount --bind /data "$NEWROOT/data"
+    mount --bind /data/adb/sideload "$NEWROOT/sideload"
+    [ -d /sdcard ] && mount --bind /sdcard "$NEWROOT/sdcard"
+    [ -d /system/apex ] && mount --bind /system/apex "$NEWROOT/apex"
+    
+    mount -t proc proc "$NEWROOT/proc"
+    mount -t sysfs sysfs "$NEWROOT/sys"
+
+    # Magisk / KernelSU / APatch execution support
+    MAGISKTMP="$(magisk --path 2>/dev/null || true)"
+    if [ -n "$MAGISKTMP" ] && [ -d "$MAGISKTMP" ]; then
+        cp "$MAGISKTMP/magisk" "$NEWROOT/sbin/magisk" 2>/dev/null || true
+        cp "$MAGISKTMP/magiskpolicy" "$NEWROOT/sbin/magiskpolicy" 2>/dev/null || true
+        chmod 755 "$NEWROOT/sbin/magisk" "$NEWROOT/sbin/magiskpolicy" 2>/dev/null || true
+        ln -sf "./magisk" "$NEWROOT/sbin/su"
+        ln -sf "./magisk" "$NEWROOT/sbin/resetprop"
+        ln -sf "./magiskpolicy" "$NEWROOT/sbin/supolicy"
+    fi
+
+    # Setup Busybox & Symlinks
+    cp "$BUSYBOX" "$NEWROOT/bin/sh" 2>/dev/null || true
+    ln -sf "$BUSYBOX" "$NEWROOT/sbin/sh"
+    ln -sf "$BUSYBOX" "$NEWROOT/system/bin/sh"
+    cp "$BUSYBOX" "$NEWROOT/sbin/busybox"
+    chmod 755 "$NEWROOT/sbin/busybox"
+    "$NEWROOT/sbin/busybox" --install -s "$NEWROOT/sbin"
+    
+    mkdir -p "$NEWROOT/system/bin" "$NEWROOT/bin" "$NEWROOT/sbin"
+    ln -sf /sbin/sh "$NEWROOT/system/bin/sh"
+    ln -sf /sbin/sh "$NEWROOT/bin/sh" 2>/dev/null || true
+    [ -f /system/build.prop ] && cp /system/build.prop "$NEWROOT/system/build.prop"
+
+    mkdir -p "$NEWROOT/sys/fs/selinux"
+    mount -t selinuxfs selinuxfs "$NEWROOT/sys/fs/selinux" 2>/dev/null || mount -t tmpfs selinuxfs "$NEWROOT/sys/fs/selinux"
+}
+
+flash_process() {
+    local ZIP="$1"
+    local ZIP_NAME
+    ZIP_NAME=$(basename "$ZIP")
+    
+    log "--- Flashing $ZIP_NAME ---"
+    
+    [ ! -f "$ZIP" ] && { log "! File not found: $ZIP"; return 1; }
+    
+    cp "$ZIP" "$NEWROOT/sideload/$ZIP_NAME"
+    local ZIP_CHROOT="/sideload/$ZIP_NAME"
+
+    "$BUSYBOX" unzip -oj "$ZIP" "META-INF/com/google/android/update-binary" -d "$NEWROOT/sbin" >/dev/null 2>&1 || {
+        log "! Failed to extract update-binary from $ZIP_NAME"
+        return 1
+    }
+    
+    chmod 755 "$NEWROOT/sbin/update-binary"
+    
+    log "Executing update-binary..."
+    "$NEWROOT/sbin/busybox" unshare -m "$NEWROOT/sbin/busybox" chroot "$NEWROOT" "/sbin/update-binary" 3 1 "$ZIP_CHROOT"
+    local RET=$?
+    
+    if [ "$RET" -eq 0 ]; then
+        log "SUCCESS: $ZIP_NAME flashed."
+        save_success "$ZIP_NAME"
+        return 0
+    else
+        log "FAILURE: update-binary returned exit code $RET"
+        return 1
+    fi
+}
+
+[ "$(id -u)" != "0" ] && abort "Root user required!"
+trap cleanup EXIT
+
+case "${1:-}" in
+    vmshell)
+        make_chroot
+        log "Entering Chroot Shell (type 'exit' to leave)"
+        "$NEWROOT/sbin/busybox" unshare -m "$NEWROOT/sbin/busybox" chroot "$NEWROOT" /sbin/sh
+        ;;
+    *)
+        if [ -z "${1:-}" ]; then
+            echo "Usage: $0 <file1.zip> [file2.zip...]"
+            echo "Options (env): NOSYSTEM=1, SYSTEM_MODE=ro|rw, DEBUG=1"
+            exit 0
+        fi
+        
+        make_chroot
+        for zip in "$@"; do
+            flash_process "$zip"
+        done
+        ;;
+esac

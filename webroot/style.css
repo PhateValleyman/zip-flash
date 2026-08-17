@@ -1,0 +1,173 @@
+:root {
+    --bg: #121212;
+    --card: #1e1e1e;
+    --text: #ffffff;
+    --accent: #3b82f6;
+}
+
+body.light {
+    --bg: #f4f4f5;
+    --card: #ffffff;
+    --text: #09090b;
+}
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.theme-btn {
+    width: auto;
+    padding: 6px 12px;
+}
+
+.header, .card {
+    background: var(--card);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.reboot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button.flash {
+    background: #22c55e;
+    font-size: 1.1rem;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid #444;
+    font-size: 16px;
+}
+
+body.light select {
+    background: #eee;
+    border: 1px solid #ccc;
+    color: #000;
+}
+
+pre {
+    background: #000;
+    color: #00ff66;
+    padding: 12px;
+    border-radius: 8px;
+    height: 200px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+}
+
+/* Moduly styling */
+.module-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #333;
+}
+
+body.light .module-item {
+    border-bottom: 1px solid #ddd;
+}
+
+.module-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-remove, .btn-backup, .btn-webui {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
+.btn-remove {
+    background: #ef4444;
+}
+
+.btn-backup {
+    background: #eab308;
+}
+
+.btn-webui {
+    background: #06b6d4;
+}
+
+/* Posuvník / Switch styling */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #555;
+    transition: .3s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #22c55e;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}

@@ -1,0 +1,7 @@
+id=zip-flash
+name=ZIP Flash
+version=1.5
+versionCode=105
+author=PhateValleyman <Jonas.Ned@outlook.com>
+description=Flash recovery ZIP packages without custom recovery using isolated chroot. Also you can manage Magisk modules.
+webroot=webroot
