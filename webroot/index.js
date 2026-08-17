@@ -75,11 +75,23 @@ async function flash() {
     const logEl = document.getElementById("log");
     logEl.innerText += `\n[Instalace ZIP: ${currentZip.split('/').pop()}]\n`;
     
+    setBusy('Flash ZIP: ' + currentZip.split('/').pop());
     let r = await exec(cmd);
+    clearBusy();
     logEl.innerText += (r.stdout || "") + (r.stderr || "");
     logEl.scrollTop = logEl.scrollHeight;
     
     loadModules();
+}
+
+function setBusy(msg){
+    document.body.classList.add('busy');
+    const s = document.getElementById('spinner'); if(s) s.style.display='inline-block';
+    const logEl = document.getElementById('log'); if(msg) { logEl.innerText += `\n[${msg}]\n`; logEl.scrollTop = logEl.scrollHeight; }
+}
+function clearBusy(){
+    document.body.classList.remove('busy');
+    const s = document.getElementById('spinner'); if(s) s.style.display='none';
 }
 
 async function loadModules() {
@@ -130,6 +142,7 @@ async function loadModules() {
                     <span class="slider"></span>
                 </label>
                 <button class="btn-backup" onclick="backupModule('${id}')" title="Zálohovat modul do ZIP">💾</button>
+                <button class="btn-restore" onclick="restoreModuleFromZip('${id}')" title="Obnovit modul z vybraného ZIP">🔁</button>
                 <button class="btn-remove" onclick="removeModule('${id}', '${name || id}')" title="Odinstalovat">🗑️</button>
             </div>
         `;
@@ -137,9 +150,25 @@ async function loadModules() {
     });
 }
 
-function openWebUI(id) {
-    // Přesměrování na WebUI modulu v prostředí KernelSU / WebUI Manageru
-    window.location.href = `https://ksu.module/${id}/index.html`;
+async function openWebUI(id) {
+    const logEl = document.getElementById('log');
+    setBusy('Spouštím mmrl WebView pro ' + id);
+
+    // Preferovat lokální file:// cesta do webrootu modulu a předat jako extra
+    const fileUrl = `file:///data/adb/modules/${id}/webroot/index.html`;
+    const modulePath = `/data/adb/modules/${id}/webroot`;
+
+    // Zkusit několik intentů: 1) otevřít s data=file:// 2) poslat jako extra --es module_path 3) fallback na http lokální/https
+    const cmd = `am start -n com.dergoogler.mmrl.wx/.MainActivity -d "${fileUrl}" --es module_id "${id}" --es module_path "${modulePath}" || am start -n com.dergoogler.mmrl.wx/.MainActivity --es module_id "${id}" --es module_path "${modulePath}" || am start -a android.intent.action.VIEW -d "http://127.0.0.1/ksu/${id}/index.html"`;
+
+    const r = await exec(cmd);
+    if (r.errno === 0) {
+        logEl.innerText += `\n[Spuštěno v mmrl pro ${id}]\n`;
+    } else {
+        logEl.innerText += `\n[Neúspěch spuštění mmrl, fallback chyba: ${r.stderr || r.stdout}]\n`;
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+    clearBusy();
 }
 
 async function toggleModule(id, enable) {
@@ -160,14 +189,56 @@ async function backupModule(id) {
     logEl.scrollTop = logEl.scrollHeight;
 
     const outFile = `/sdcard/Download/${id}_backup.zip`;
+    // Create zip suitable for Magisk flashing (module files at root)
     const cmd = `cd /data/adb/modules/${id} && zip -r "${outFile}" . -x "disable" "remove"`;
     
+    setBusy('Zálohování modulu ' + id);
     const r = await exec(cmd);
+    clearBusy();
     if (r.errno === 0) {
         logEl.innerText += `Záloha uložena do: ${outFile}\n`;
         scanFiles();
     } else {
         logEl.innerText += `Chyba při vytváření ZIP: ${r.stderr || r.stdout}\n`;
+    }
+    logEl.scrollTop = logEl.scrollHeight;
+}
+
+async function restoreModuleFromZip(guessId) {
+    // guessId: doporučené jméno modulu (z UI), pokud ZIP obsahuje module.prop, použije jeho id
+    const logEl = document.getElementById("log");
+    const zip = currentZip;
+    if (!zip) {
+        alert('Vyberte ZIP soubor k obnovení v poli nahoře.');
+        return;
+    }
+    if (!confirm(`Opravdu chcete obnovit modul z ${zip.split('/').pop()} do /data/adb/modules/?`)) return;
+
+    logEl.innerText += `\n[Obnova modulu z ${zip} ...]\n`;
+
+    // Bezpečný jednoranový příkaz: rozbalit do temp, zjistit id z module.prop nebo použít guessId, přesunout
+    const cmd = `TMP=/data/local/tmp/ziprestore_$(date +%s); rm -rf "$TMP"; mkdir -p "$TMP" && unzip -o "${zip}" -d "$TMP" >/dev/null 2>&1 || exit 2; \
+if [ -f "$TMP/module.prop" ]; then \
+  id=$(grep '^id=' "$TMP/module.prop" | cut -d= -f2- || true); \
+  if [ -z "$id" ]; then id='${guessId}'; fi; \
+else \
+  id='${guessId}'; \
+fi; \
+if [ -z "$id" ]; then echo "NOID"; exit 3; fi; \
+# Prepare destination
+DEST=/data/adb/modules/$id; rm -rf "$DEST.tmp"; mv "$TMP" "$DEST.tmp" || exit 4; \
+# Ensure proper ownership/permissions and cleanup
+mkdir -p /data/adb/modules; mv "$DEST.tmp" "$DEST" || exit 5; chmod -R 755 "$DEST"; chown -R 0:0 "$DEST" 2>/dev/null || true; echo "OK:$id"`;
+
+    setBusy('Obnova modulu z ' + zip.split('/').pop());
+    const r = await exec(cmd);
+    clearBusy();
+    if (r.errno === 0 && r.stdout && r.stdout.indexOf('OK:') !== -1) {
+        const newId = r.stdout.split('OK:').pop().trim();
+        logEl.innerText += `Obnova dokončena: ${newId}\n`;
+        loadModules();
+    } else {
+        logEl.innerText += `Chyba při obnově: ${r.stderr || r.stdout}\n`;
     }
     logEl.scrollTop = logEl.scrollHeight;
 }

@@ -171,3 +171,31 @@ input:checked + .slider {
 input:checked + .slider:before {
     transform: translateX(20px);
 }
+
+/* Restore button */
+.btn-restore {
+    background: #06b6a4;
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
+/* Busy state: dim controls and prevent interaction during long ops */
+body.busy .module-controls button,
+body.busy .module-controls .switch {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Spinner */
+.spinner {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: var(--accent);
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
