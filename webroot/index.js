@@ -317,6 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.classList.add("light");
     }
     bindFilePicker();
-    scanFiles();
+    // Neprovádět automatické skenování ZIPů při načtení.
+    // Seznam ZIPů se zobrazí až po kliknutí na tlačítko "Najít ZIPy na zařízení".
     loadModules();
 });
