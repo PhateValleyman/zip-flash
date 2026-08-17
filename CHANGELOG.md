@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.8] - 2026-08-17
+- Scan device paths and show popup list of found ZIPs (click to select) via 'Najít ZIPy na zařízení'.
+- Added modal UI for selecting discovered ZIPs; improved UX when picking files.
+
 ## [1.7] - 2026-08-17
 - Replace ZIP dropdown with classic file upload picker and wire selection to /sdcard/Download/<filename>.
 - Wire busy spinner and UI disable during long operations; improved UX for backup/restore.
