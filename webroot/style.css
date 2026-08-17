@@ -199,3 +199,39 @@ body.busy .module-controls .switch {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal for ZIP selection */
+.modal {
+    position: fixed;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.modal-content {
+    background: var(--card);
+    color: var(--text);
+    padding: 16px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 560px;
+    max-height: 70vh;
+    overflow: auto;
+}
+.modal-close {
+    float: right;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+.zip-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    cursor: pointer;
+}
+.zip-item:hover { background: rgba(255,255,255,0.02); }
+.zip-empty { color: #ffb; padding: 12px; }

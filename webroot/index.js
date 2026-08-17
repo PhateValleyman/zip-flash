@@ -36,23 +36,51 @@ async function reboot(target) {
 }
 
 async function scanFiles() {
-    const select = document.getElementById("fileSelect");
+    // Search common locations and show modal with clickable list
+    setBusy('Hledám ZIPy na zařízení...');
     const r = await exec("ls /storage/65D9-1787*.zip /storage/65D9-1787/Download/*.zip /storage/65D9-1787/FULL/*.zip /storage/65D9-1787/FULL/Download/*.zip /sdcard/Download/*.zip /sdcard/Download/@zip/*.zip /sdcard/*.zip 2>/dev/null");
-    
-    select.innerHTML = '<option value="">-- Vyberte ZIP --</option>';
-    if (!r.stdout || r.stdout.trim() === "") {
-        select.innerHTML = '<option value="">Žádné ZIPy nenalezeny</option>';
+
+    const modal = document.getElementById('zipModal');
+    const list = document.getElementById('zipList');
+    if (!modal || !list) {
+        clearBusy();
+        alert('Modal element nenalezen.');
         return;
     }
 
-    r.stdout.trim().split("\n").forEach(file => {
-        const path = file.trim();
-        const name = path.split("/").pop();
-        const opt = document.createElement("option");
-        opt.value = path;
-        opt.innerText = name;
-        select.appendChild(opt);
+    if (!r.stdout || r.stdout.trim() === "") {
+        list.innerHTML = '<div class="zip-empty">Žádné ZIPy nalezeny v předdefinovaných cestách.</div>';
+        modal.style.display = 'block';
+        clearBusy();
+        return;
+    }
+
+    const lines = r.stdout.trim().split('\n');
+    list.innerHTML = '';
+    lines.forEach(p => {
+        const path = p.trim();
+        const name = path.split('/').pop();
+        const item = document.createElement('div');
+        item.className = 'zip-item';
+        item.innerHTML = `<strong>${name}</strong><br><small style="color:#aaa">${path}</small>`;
+        item.onclick = () => chooseZip(path);
+        list.appendChild(item);
     });
+
+    modal.style.display = 'block';
+    clearBusy();
+}
+
+function chooseZip(path){
+    currentZip = path;
+    const info = document.getElementById('selectedFile');
+    if(info) info.innerText = `Vybráno: ${path.split('/').pop()} (cesta: ${path})`;
+    closeZipModal();
+}
+
+function closeZipModal(){
+    const modal = document.getElementById('zipModal');
+    if(modal) modal.style.display = 'none';
 }
 
 function updateSelection() {
