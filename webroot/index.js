@@ -56,7 +56,34 @@ async function scanFiles() {
 }
 
 function updateSelection() {
-    currentZip = document.getElementById("fileSelect").value;
+    // Keep compatibility: try file picker first, then fall back to select if present
+    const picker = document.getElementById('filePicker');
+    if (picker && picker.files && picker.files.length > 0) {
+        const name = picker.files[0].name;
+        // Common location where Android file pickers pick from
+        currentZip = `/sdcard/Download/${name}`;
+        document.getElementById('selectedFile').innerText = `Vybráno: ${name} (předpokládaná cesta: ${currentZip})`;
+        return;
+    }
+
+    const sel = document.getElementById("fileSelect");
+    if (sel) currentZip = sel.value;
+}
+
+// helper bound to file input change
+function bindFilePicker(){
+    const picker = document.getElementById('filePicker');
+    if(!picker) return;
+    picker.addEventListener('change', () => {
+        const info = document.getElementById('selectedFile');
+        if(picker.files && picker.files.length>0){
+            info.innerText = `Vybráno: ${picker.files[0].name} (bude použita cesta /sdcard/Download/)`;
+            currentZip = `/sdcard/Download/${picker.files[0].name}`;
+        } else {
+            info.innerText = 'Žádný soubor vybrán';
+            currentZip = '';
+        }
+    });
 }
 
 async function flash() {
@@ -261,6 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (localStorage.getItem("theme") === "light") {
         document.body.classList.add("light");
     }
+    bindFilePicker();
     scanFiles();
     loadModules();
 });

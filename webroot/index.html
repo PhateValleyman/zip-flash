@@ -25,10 +25,12 @@
 
 <div class="card">
 <h2>Instalovat ZIP / Modul</h2>
-<select id="fileSelect" onchange="updateSelection()">
-    <option value="">-- Vyberte ZIP --</option>
-</select>
-<button onclick="scanFiles()" style="margin-top: 10px; background: #444;">🔄 Obnovit seznam ZIPů</button>
+<div style="margin-bottom:8px;">
+    <input id="filePicker" type="file" accept=".zip" />
+    <button onclick="chooseFile()`" style="display:none"></button>
+</div>
+<div id="selectedFile" style="margin-top:6px;color:#ccc;">Žádný soubor vybrán</div>
+<button onclick="scanFiles()" style="margin-top: 10px; background: #444;">🔄 Najít ZIPy na zařízení</button>
 <div style="margin-top: 10px;">
     <label><input id="nosystem" type="checkbox"> NOSYSTEM</label>
     <label><input id="debug" type="checkbox"> DEBUG</label>
