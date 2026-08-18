@@ -17,3 +17,10 @@
 - Backup ZIPs are created compatible with Magisk flashing.
 - Minor UI improvements and bugfixes.
 
+
+
+## 1.9.5
+- Fixed chroot busybox initialization order
+- Added KernelSU/APatch busybox detection
+- Added update-binary validation
+- Fixed WebView ZIP modal HTML

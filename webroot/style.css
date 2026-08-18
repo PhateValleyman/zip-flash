@@ -201,7 +201,7 @@ body.busy .module-controls .switch {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Modal for ZIP selection */
-.modal {
+.modal {\n    touch-action:none;
     position: fixed;
     left: 0; top: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.6);
@@ -210,7 +210,7 @@ body.busy .module-controls .switch {
     justify-content: center;
     z-index: 9999;
 }
-.modal-content {
+.modal-content {\n    touch-action:auto;
     background: var(--card);
     color: var(--text);
     padding: 16px;

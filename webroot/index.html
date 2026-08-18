@@ -27,7 +27,6 @@
 <h2>Instalovat ZIP / Modul</h2>
 <div style="margin-bottom:8px;">
     <input id="filePicker" type="file" accept=".zip" />
-    <button onclick="chooseFile()`" style="display:none"></button>
 </div>
 <div id="selectedFile" style="margin-top:6px;color:#ccc;">Vyberte ZIP soubor pomocí nahrání (doporučeno) nebo klikněte "🔄 Najít ZIPy na zařízení"</div>
 <button onclick="scanFiles()" style="margin-top: 10px; background: #444;">🔄 Najít ZIPy na zařízení</button>
@@ -52,7 +51,7 @@
 </div>
 
 <!-- Modal for ZIP selection -->
-<div id="zipModal" class="modal" style="display:none">
+<div id="zipModal" class="modal">
     <div class="modal-content">
         <button class="modal-close" onclick="closeZipModal()">✖</button>
         <h3>Vybrat ZIP</h3>

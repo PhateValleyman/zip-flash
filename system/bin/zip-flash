@@ -11,7 +11,12 @@ LOGDIR="$DATA/logs"
 
 # Busybox resolution
 BUSYBOX=""
-for bb in "/data/adb/magisk/busybox" "$(which busybox 2>/dev/null)"; do
+for bb in \
+    "/data/adb/magisk/busybox" \
+    "/data/adb/ksu/bin/busybox" \
+    "/data/adb/ap/bin/busybox" \
+    "$(which busybox 2>/dev/null)"
+do
     if [ -x "$bb" ]; then
         BUSYBOX="$bb"
         break
@@ -126,16 +131,17 @@ make_chroot() {
     fi
 
     # Setup Busybox & Symlinks
-    cp "$BUSYBOX" "$NEWROOT/bin/sh" 2>/dev/null || true
-    ln -sf "$BUSYBOX" "$NEWROOT/sbin/sh"
-    ln -sf "$BUSYBOX" "$NEWROOT/system/bin/sh"
+    mkdir -p "$NEWROOT/system/bin" "$NEWROOT/bin" "$NEWROOT/sbin"
+
     cp "$BUSYBOX" "$NEWROOT/sbin/busybox"
     chmod 755 "$NEWROOT/sbin/busybox"
-    "$NEWROOT/sbin/busybox" --install -s "$NEWROOT/sbin"
-    
-    mkdir -p "$NEWROOT/system/bin" "$NEWROOT/bin" "$NEWROOT/sbin"
+
+    ln -sf /sbin/busybox "$NEWROOT/sbin/sh"
     ln -sf /sbin/sh "$NEWROOT/system/bin/sh"
     ln -sf /sbin/sh "$NEWROOT/bin/sh" 2>/dev/null || true
+
+    "$NEWROOT/sbin/busybox" --install -s "$NEWROOT/sbin"
+
     [ -f /system/build.prop ] && cp /system/build.prop "$NEWROOT/system/build.prop"
 
     mkdir -p "$NEWROOT/sys/fs/selinux"
